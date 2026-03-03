@@ -23,7 +23,13 @@ import {
   Trash2,
   Plus,
   Mail,
-  Download
+  Download,
+  PlayCircle,
+  BookOpen,
+  FileText,
+  Code,
+  Palette,
+  LayoutDashboard
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -72,7 +78,9 @@ const products = [
     image: 'https://picsum.photos/seed/python/400/400', 
     category: 'دورات',
     fileSize: '1.2 GB',
-    fileType: 'MP4'
+    fileType: 'MP4',
+    rating: 4.9,
+    reviewCount: 124
   },
   { 
     id: 'p2', 
@@ -81,7 +89,9 @@ const products = [
     image: 'https://picsum.photos/seed/design/400/400', 
     category: 'كتب',
     fileSize: '45 MB',
-    fileType: 'PDF'
+    fileType: 'PDF',
+    rating: 4.7,
+    reviewCount: 85
   },
   { 
     id: 'p3', 
@@ -90,7 +100,31 @@ const products = [
     image: 'https://picsum.photos/seed/excel/400/400', 
     category: 'قوالب',
     fileSize: '5 MB',
-    fileType: 'XLSX'
+    fileType: 'XLSX',
+    rating: 4.8,
+    reviewCount: 42
+  },
+  { 
+    id: 'p4', 
+    name: 'برنامج إدارة المخازن والمبيعات', 
+    price: 25000, 
+    image: 'https://picsum.photos/seed/software/400/400', 
+    category: 'برامج',
+    fileSize: '150 MB',
+    fileType: 'EXE',
+    rating: 4.6,
+    reviewCount: 28
+  },
+  { 
+    id: 'p5', 
+    name: 'حزمة أيقونات واجهة المستخدم الاحترافية', 
+    price: 7500, 
+    image: 'https://picsum.photos/seed/icons/400/400', 
+    category: 'تصاميم',
+    fileSize: '85 MB',
+    fileType: 'FIG',
+    rating: 4.9,
+    reviewCount: 56
   }
 ];
 
@@ -102,6 +136,16 @@ export default function StoreFront() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('الكل');
+
+  const categories = [
+    { name: 'الكل', icon: <LayoutDashboard size={20} /> },
+    { name: 'دورات', icon: <PlayCircle size={20} /> },
+    { name: 'كتب', icon: <BookOpen size={20} /> },
+    { name: 'قوالب', icon: <FileText size={20} /> },
+    { name: 'برامج', icon: <Code size={20} /> },
+    { name: 'تصاميم', icon: <Palette size={20} /> },
+  ];
 
   const [activeBanner, setActiveBanner] = useState(0);
   const banners = [
@@ -364,6 +408,30 @@ export default function StoreFront() {
         </div>
       </section>
 
+      {/* Categories Section */}
+      <section className="px-4 sm:px-6 lg:px-8 py-4 bg-white border-y border-slate-100 sticky top-20 z-30">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 overflow-x-auto no-scrollbar pb-2 -mb-2 cursor-grab active:cursor-grabbing select-none">
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => setSelectedCategory(cat.name)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all duration-300 border shadow-sm hover:shadow-md ${
+                  selectedCategory === cat.name
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100'
+                    : 'bg-white text-slate-600 border-slate-100 hover:border-indigo-200 hover:text-indigo-600'
+                }`}
+              >
+                <span className={`${selectedCategory === cat.name ? 'text-white' : 'text-indigo-500'}`}>
+                  {cat.icon}
+                </span>
+                <span className="text-sm font-bold">{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Product Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
@@ -377,7 +445,12 @@ export default function StoreFront() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-          {products.filter(p => p.name.includes(searchQuery)).map((product) => (
+          {products
+            .filter(p => 
+              (selectedCategory === 'الكل' || p.category === selectedCategory) && 
+              p.name.includes(searchQuery)
+            )
+            .map((product) => (
             <motion.div 
               key={product.id}
               whileHover={{ y: -8 }}
@@ -405,7 +478,7 @@ export default function StoreFront() {
                 
                 <div className="flex items-center gap-1 text-amber-400 mb-4">
                   <Star size={12} fill="currentColor" />
-                  <span className="text-[10px] font-bold text-slate-400 mr-1">4.9 (24)</span>
+                  <span className="text-[10px] font-bold text-slate-400 mr-1">{product.rating} ({product.reviewCount})</span>
                 </div>
 
                 <div className="space-y-3 mt-auto">

@@ -31,7 +31,13 @@ const products = [
     description: 'دورة شاملة من الصفر إلى الاحتراف في لغة بايثون، تشمل المشاريع العملية والتمارين التفاعلية. ستتعلم أساسيات اللغة، التعامل مع البيانات، وبناء تطبيقات ويب حقيقية.',
     fileSize: '1.2 GB',
     fileType: 'MP4',
-    features: ['أكثر من 20 ساعة فيديو', 'مشاريع عملية حقيقية', 'شهادة إتمام الدورة', 'دعم فني مباشر']
+    features: ['أكثر من 20 ساعة فيديو', 'مشاريع عملية حقيقية', 'شهادة إتمام الدورة', 'دعم فني مباشر'],
+    rating: 4.9,
+    reviewCount: 124,
+    reviews: [
+      { id: 1, user: 'أحمد محمد', rating: 5, comment: 'دورة ممتازة جداً وشرح واضح وبسيط.', date: '2024-02-15' },
+      { id: 2, user: 'سارة علي', rating: 4, comment: 'محتوى غني جداً، لكن كنت أتمنى لو كان هناك المزيد من التمارين.', date: '2024-02-10' }
+    ]
   },
   { 
     id: 'p2', 
@@ -42,7 +48,12 @@ const products = [
     description: 'دليل شامل لتعلم أساسيات التصميم الجرافيكي باستخدام أدوات مجانية. يغطي الكتاب نظريات الألوان، اختيار الخطوط، وتنسيق العناصر البصرية بشكل احترافي.',
     fileSize: '45 MB',
     fileType: 'PDF',
-    features: ['دليل خطوة بخطوة', 'أمثلة تطبيقية', 'قوالب مجانية مرفقة', 'تحديثات مجانية مدى الحياة']
+    features: ['دليل خطوة بخطوة', 'أمثلة تطبيقية', 'قوالب مجانية مرفقة', 'تحديثات مجانية مدى الحياة'],
+    rating: 4.7,
+    reviewCount: 85,
+    reviews: [
+      { id: 1, user: 'خالد حسن', rating: 5, comment: 'كتاب رائع جداً للمبتدئين، أنصح به بشدة.', date: '2024-01-20' }
+    ]
   },
   { 
     id: 'p3', 
@@ -53,7 +64,12 @@ const products = [
     description: 'مجموعة من القوالب الجاهزة لتنظيم حساباتك المالية الشخصية أو التجارية. تشمل قوالب للميزانية، تتبع المصاريف، وإدارة المخزون بشكل مبسط.',
     fileSize: '5 MB',
     fileType: 'XLSX',
-    features: ['سهولة الاستخدام', 'معادلات جاهزة', 'دليل استخدام مرفق', 'متوافق مع جميع إصدارات إكسل']
+    features: ['سهولة الاستخدام', 'معادلات جاهزة', 'دليل استخدام مرفق', 'متوافق مع جميع إصدارات إكسل'],
+    rating: 4.8,
+    reviewCount: 42,
+    reviews: [
+      { id: 1, user: 'ليلى محمود', rating: 5, comment: 'وفرت علي الكثير من الوقت والجهد في تنظيم حساباتي.', date: '2024-02-05' }
+    ]
   }
 ];
 
@@ -62,6 +78,8 @@ export default function ProductDetail() {
   const router = useRouter();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<any>(null);
+  const [newReview, setNewReview] = useState({ rating: 0, comment: '' });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     const loadProduct = () => {
@@ -72,6 +90,35 @@ export default function ProductDetail() {
     };
     loadProduct();
   }, [id]);
+
+  const handleReviewSubmit = () => {
+    if (newReview.rating === 0 || !newReview.comment.trim()) return;
+    
+    setIsSubmittingReview(true);
+    setTimeout(() => {
+      const review = {
+        id: Date.now(),
+        user: 'أنت',
+        rating: newReview.rating,
+        comment: newReview.comment,
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      setProduct((prev: any) => {
+        const newReviewCount = prev.reviewCount + 1;
+        const newRating = ((prev.rating * prev.reviewCount) + newReview.rating) / newReviewCount;
+        return {
+          ...prev,
+          reviews: [review, ...prev.reviews],
+          reviewCount: newReviewCount,
+          rating: Number(newRating.toFixed(1))
+        };
+      });
+      
+      setNewReview({ rating: 0, comment: '' });
+      setIsSubmittingReview(false);
+    }, 1000);
+  };
 
   if (!product) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
 
@@ -122,8 +169,8 @@ export default function ProductDetail() {
                 <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">منتج رقمي</span>
                 <div className="flex items-center gap-1 text-amber-400">
                   <Star size={14} fill="currentColor" />
-                  <span className="text-sm font-bold text-slate-900">4.9</span>
-                  <span className="text-xs text-slate-400">(120 تقييم)</span>
+                  <span className="text-sm font-bold text-slate-900">{product.rating}</span>
+                  <span className="text-xs text-slate-400">({product.reviewCount} تقييم)</span>
                 </div>
               </div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight">{product.name}</h1>
@@ -189,6 +236,90 @@ export default function ProductDetail() {
               </div>
             </div>
           </motion.div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-20 space-y-12">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+            <h2 className="text-2xl font-bold text-slate-900">تقييمات العملاء</h2>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-2xl font-black text-slate-900">{product.rating}</p>
+                <p className="text-xs text-slate-400">من 5 نجوم</p>
+              </div>
+              <div className="flex items-center gap-1 text-amber-400">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} size={20} fill={star <= Math.round(product.rating) ? "currentColor" : "none"} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-12">
+            {/* Review Form */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-8">
+                <h3 className="font-bold text-slate-900">أضف تقييمك</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500">التقييم</label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button 
+                          key={star} 
+                          onClick={() => setNewReview({ ...newReview, rating: star })}
+                          className={`transition-all ${star <= newReview.rating ? 'text-amber-400' : 'text-slate-300 hover:text-amber-200'}`}
+                        >
+                          <Star size={24} fill={star <= newReview.rating ? "currentColor" : "none"} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500">رأيك</label>
+                    <textarea 
+                      value={newReview.comment}
+                      onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                      placeholder="اكتب تجربتك مع المنتج..." 
+                      className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[120px]"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleReviewSubmit}
+                    disabled={isSubmittingReview || newReview.rating === 0 || !newReview.comment.trim()}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingReview ? 'جاري النشر...' : 'نشر التقييم'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Review List */}
+            <div className="lg:col-span-2 space-y-8">
+              {product.reviews.map((review: any) => (
+                <div key={review.id} className="space-y-4 pb-8 border-b border-slate-50 last:border-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+                        {review.user[0]}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{review.user}</h4>
+                        <p className="text-[10px] text-slate-400">{review.date}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-amber-400">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star key={star} size={12} fill={star <= review.rating ? "currentColor" : "none"} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-slate-600 text-sm leading-relaxed">{review.comment}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </main>
     </div>
