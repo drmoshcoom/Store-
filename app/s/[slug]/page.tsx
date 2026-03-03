@@ -328,11 +328,14 @@ export default function StoreFront() {
   );
 }
 
+import { NotificationService } from '@/lib/notifications';
+
 function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, total: number, storeWallets: any }) {
   const [step, setStep] = useState(1);
   const [selectedWallet, setSelectedWallet] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [customerData, setCustomerData] = useState({ name: '', phone: '' });
 
   const wallets = [
     { id: 'jeeb', name: 'جيب (JeeB)', icon: 'https://picsum.photos/seed/jeeb/40/40' },
@@ -341,10 +344,29 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
     { id: 'floosak', name: 'فلوسك (Floosak)', icon: 'https://picsum.photos/seed/floosak/40/40' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    // Simulate API call and notifications
+    setTimeout(async () => {
+      const orderId = '#ORD-' + Math.floor(100000 + Math.random() * 900000);
+      const mockOrder = {
+        id: orderId,
+        storeId: '1',
+        customerName: customerData.name,
+        customerPhone: customerData.phone,
+        total: total,
+        status: 'pending' as any,
+        paymentMethod: wallets.find(w => w.id === selectedWallet)?.name || '',
+        items: [],
+        createdAt: new Date()
+      };
+
+      // Trigger Notifications
+      await NotificationService.notifyCustomerNewOrder(mockOrder);
+      await NotificationService.notifyOwnerNewOrder(mockOrder);
+
       setIsSubmitting(false);
       setIsSuccess(true);
     }, 2000);
@@ -404,11 +426,24 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500">الاسم الكامل</label>
-                    <input type="text" placeholder="أدخل اسمك..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    <input 
+                      type="text" 
+                      placeholder="أدخل اسمك..." 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={customerData.name}
+                      onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500">رقم الهاتف</label>
-                    <input type="tel" placeholder="777XXXXXX" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-left" dir="ltr" />
+                    <input 
+                      type="tel" 
+                      placeholder="777XXXXXX" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-left" 
+                      dir="ltr" 
+                      value={customerData.phone}
+                      onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
+                    />
                   </div>
                 </div>
               </div>

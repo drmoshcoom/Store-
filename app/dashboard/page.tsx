@@ -28,7 +28,8 @@ import {
   ExternalLink,
   Wallet,
   Phone,
-  User
+  User,
+  CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -54,9 +55,37 @@ const data = [
   { name: 'الجمعة', sales: 3490 },
 ];
 
+import AIAssistant from '@/components/AIAssistant';
+
+import { db, Notification } from '@/lib/db';
+import { NotificationService } from '@/lib/notifications';
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchNotifications = () => {
+      setNotifications(db.getNotificationsByStoreId('1'));
+    };
+
+    // Load initial notifications
+    fetchNotifications();
+    
+    // In a real app, we'd use WebSockets or polling here
+    const interval = setInterval(fetchNotifications, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAsRead = (id: string) => {
+    db.markNotificationAsRead(id);
+    setNotifications(db.getNotificationsByStoreId('1'));
+  };
 
   const menuItems = [
     { id: 'overview', label: 'نظرة عامة', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
@@ -181,10 +210,72 @@ export default function DashboardPage() {
                 className="bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-64"
               />
             </div>
-            <button className="relative p-2 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-            </button>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="relative p-2 text-slate-500 hover:bg-slate-50 rounded-xl transition-all"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isNotificationsOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <h4 className="font-bold text-sm text-slate-900">الإشعارات</h4>
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{unreadCount} جديد</span>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center text-slate-400">
+                            <Bell size={32} className="mx-auto mb-2 opacity-20" />
+                            <p className="text-xs">لا توجد إشعارات حالياً</p>
+                          </div>
+                        ) : (
+                          notifications.map((n) => (
+                            <div 
+                              key={n.id} 
+                              onClick={() => handleMarkAsRead(n.id)}
+                              className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-all cursor-pointer ${!n.read ? 'bg-indigo-50/30' : ''}`}
+                            >
+                              <div className="flex gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                  n.type === 'order' ? 'bg-indigo-100 text-indigo-600' : 
+                                  n.type === 'payment' ? 'bg-emerald-100 text-emerald-600' : 
+                                  'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {n.type === 'order' ? <ShoppingCart size={14} /> : <CreditCard size={14} />}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-xs font-bold text-slate-900">{n.title}</p>
+                                  <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{n.message}</p>
+                                  <p className="text-[9px] text-slate-400 mt-1">منذ قليل</p>
+                                </div>
+                                {!n.read && <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full mt-1" />}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      <button className="w-full p-3 text-center text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-all border-t border-slate-50">
+                        عرض جميع الإشعارات
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="flex items-center gap-3 border-r border-slate-200 pr-6">
               <div className="text-left">
                 <p className="text-sm font-bold text-slate-900">محمد أحمد</p>
@@ -205,6 +296,7 @@ export default function DashboardPage() {
           {activeTab === 'wallets' && <WalletsTab />}
           {activeTab === 'settings' && <SettingsTab />}
         </div>
+        <AIAssistant />
       </main>
     </div>
   );
@@ -442,8 +534,20 @@ function OrdersTab() {
                     <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="عرض التفاصيل"><Eye size={18} /></button>
                     {order.status === 'pending' && (
                       <>
-                        <button className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="قبول الدفع"><CheckCircle2 size={18} /></button>
-                        <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="رفض الدفع"><XCircle size={18} /></button>
+                        <button 
+                          onClick={() => NotificationService.notifyOwnerPaymentStatusChange(order.id, 'approved')}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" 
+                          title="قبول الدفع"
+                        >
+                          <CheckCircle2 size={18} />
+                        </button>
+                        <button 
+                          onClick={() => NotificationService.notifyOwnerPaymentStatusChange(order.id, 'rejected')}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" 
+                          title="رفض الدفع"
+                        >
+                          <XCircle size={18} />
+                        </button>
                       </>
                     )}
                   </div>

@@ -60,6 +60,16 @@ export interface Order {
   createdAt: Date;
 }
 
+export interface Notification {
+  id: string;
+  storeId: string;
+  title: string;
+  message: string;
+  type: 'order' | 'payment' | 'system';
+  read: boolean;
+  createdAt: Date;
+}
+
 // Mock Data Storage
 class DB {
   stores: Store[] = [
@@ -100,6 +110,7 @@ class DB {
     }
   ];
   orders: Order[] = [];
+  notifications: Notification[] = [];
 
   // Helper methods
   getStoreBySlug(slug: string) {
@@ -137,6 +148,20 @@ class DB {
   addProduct(product: Product) {
     this.products.push(product);
     return product;
+  }
+
+  addNotification(notification: Notification) {
+    this.notifications.unshift(notification);
+    return notification;
+  }
+
+  getNotificationsByStoreId(storeId: string) {
+    return this.notifications.filter(n => n.storeId === storeId);
+  }
+
+  markNotificationAsRead(id: string) {
+    const n = this.notifications.find(n => n.id === id);
+    if (n) n.read = true;
   }
 }
 
