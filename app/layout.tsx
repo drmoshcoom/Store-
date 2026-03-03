@@ -1,5 +1,6 @@
 import { Inter, Cairo } from 'next/font/google'
 import './globals.css';
+import { CartProvider } from '@/context/CartContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={`${inter.variable} ${cairo.variable}`}>
       <body className="font-arabic antialiased bg-slate-50 text-slate-900" suppressHydrationWarning>
-        {children}
+        <CartProvider>
+          {children}
+        </CartProvider>
       </body>
     </html>
   );

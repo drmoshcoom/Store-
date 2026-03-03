@@ -40,16 +40,21 @@ export interface Product {
   stock: number;
   status: 'active' | 'inactive';
   digitalFileUrl?: string;
+  fileSize?: string;
+  fileType?: string; // e.g., 'PDF', 'ZIP', 'MP4'
 }
+
+export type PaymentMethodType = 'bank_local' | 'bank_intl' | 'paypal' | 'crypto';
 
 export interface Order {
   id: string;
   storeId: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   total: number;
   status: OrderStatus;
-  paymentMethod: string;
+  paymentMethod: PaymentMethodType;
   paymentScreenshot?: string;
   items: {
     productId: string;
@@ -58,6 +63,7 @@ export interface Order {
     quantity: number;
   }[];
   createdAt: Date;
+  downloadToken?: string; // For secure downloads
 }
 
 export interface Notification {
@@ -89,24 +95,44 @@ class DB {
     {
       id: 'p1',
       storeId: '1',
-      name: 'هاتف ذكي برو',
-      description: 'أحدث هاتف ذكي بمواصفات عالية',
-      price: 45000,
-      type: 'physical',
-      image: 'https://picsum.photos/seed/phone/400/400',
-      stock: 10,
+      name: 'دورة تعلم البرمجة بلغة بايثون',
+      description: 'دورة شاملة من الصفر إلى الاحتراف في لغة بايثون، تشمل المشاريع العملية.',
+      price: 15000,
+      type: 'digital',
+      image: 'https://picsum.photos/seed/python/400/400',
+      stock: 999,
       status: 'active',
+      fileSize: '1.2 GB',
+      fileType: 'MP4',
+      digitalFileUrl: 'https://example.com/download/python-course.zip'
     },
     {
       id: 'p2',
       storeId: '1',
-      name: 'دورة البرمجة الشاملة',
-      description: 'تعلم البرمجة من الصفر إلى الاحتراف',
-      price: 15000,
+      name: 'كتاب التصميم الجرافيكي للمبتدئين',
+      description: 'دليل شامل لتعلم أساسيات التصميم الجرافيكي باستخدام أدوات مجانية.',
+      price: 5000,
       type: 'digital',
-      image: 'https://picsum.photos/seed/code/400/400',
+      image: 'https://picsum.photos/seed/design/400/400',
       stock: 999,
       status: 'active',
+      fileSize: '45 MB',
+      fileType: 'PDF',
+      digitalFileUrl: 'https://example.com/download/design-book.pdf'
+    },
+    {
+      id: 'p3',
+      storeId: '1',
+      name: 'قوالب إكسل للمحاسبة المالية',
+      description: 'مجموعة من القوالب الجاهزة لتنظيم حساباتك المالية الشخصية أو التجارية.',
+      price: 3500,
+      type: 'digital',
+      image: 'https://picsum.photos/seed/excel/400/400',
+      stock: 999,
+      status: 'active',
+      fileSize: '5 MB',
+      fileType: 'XLSX',
+      digitalFileUrl: 'https://example.com/download/excel-templates.zip'
     }
   ];
   orders: Order[] = [];
