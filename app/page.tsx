@@ -27,6 +27,7 @@ import {
   Wallet
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -137,11 +138,16 @@ export default function LandingPage() {
                   dashboard.yemensass.ye
                 </div>
               </div>
-              <img 
-                src="https://picsum.photos/seed/dashboard/1200/800" 
-                alt="Dashboard Preview" 
-                className="w-full h-auto"
-              />
+              <div className="relative w-full aspect-[16/10]">
+                <Image 
+                  src="https://picsum.photos/seed/dashboard/1200/800" 
+                  alt="Dashboard Preview" 
+                  fill
+                  className="object-cover"
+                  priority
+                  referrerPolicy="no-referrer"
+                />
+              </div>
             </div>
           </motion.div>
         </div>

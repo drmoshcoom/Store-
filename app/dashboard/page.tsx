@@ -32,6 +32,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   BarChart, 
@@ -59,33 +60,98 @@ import AIAssistant from '@/components/AIAssistant';
 
 import { db, Notification } from '@/lib/db';
 import { NotificationService } from '@/lib/notifications';
+import { useAuth } from '@/lib/auth';
+import { auth } from '@/lib/firebase';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { Timestamp } from 'firebase/firestore';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { user, profile, loading: authLoading, isAdmin } = useAuth();
 
   useEffect(() => {
-    const fetchNotifications = () => {
-      setNotifications(db.getNotificationsByStoreId('1'));
-    };
-
-    // Load initial notifications
-    fetchNotifications();
-    
-    // In a real app, we'd use WebSockets or polling here
-    const interval = setInterval(fetchNotifications, 3000);
-    
-    return () => clearInterval(interval);
-  }, []);
+    if (isAdmin) {
+      const unsubscribe = db.subscribeToNotifications('1', (newNotifications) => {
+        setNotifications(newNotifications);
+      });
+      return () => unsubscribe();
+    }
+  }, [isAdmin]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleMarkAsRead = (id: string) => {
-    db.markNotificationAsRead(id);
-    setNotifications(db.getNotificationsByStoreId('1'));
+  const handleMarkAsRead = async (id: string) => {
+    await db.markNotificationAsRead(id);
   };
+
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+            <User size={40} />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">تسجيل دخول المسؤول</h1>
+          <p className="text-slate-600">يرجى تسجيل الدخول باستخدام حسابك للوصول إلى لوحة التحكم.</p>
+          <button 
+            onClick={handleLogin}
+            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+          >
+            <CreditCard size={20} />
+            تسجيل الدخول باستخدام Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
+            <XCircle size={40} />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">وصول مرفوض</h1>
+          <p className="text-slate-600">ليس لديك صلاحية للوصول إلى هذه الصفحة. يرجى التواصل مع المدير.</p>
+          <button 
+            onClick={handleLogout}
+            className="w-full bg-slate-200 text-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-300 transition-all"
+          >
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const menuItems = [
     { id: 'overview', label: 'نظرة عامة', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
@@ -165,7 +231,10 @@ export default function DashboardPage() {
         </nav>
 
         <div className="p-4 border-t border-slate-100">
-          <button className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all relative group`}>
+          <button 
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-all relative group`}
+          >
             <LogOut size={20} className="shrink-0" />
             <AnimatePresence mode="wait">
               {isSidebarOpen && (
@@ -281,8 +350,14 @@ export default function DashboardPage() {
                 <p className="text-sm font-bold text-slate-900">محمد أحمد</p>
                 <p className="text-xs text-slate-500">مدير المتجر</p>
               </div>
-              <div className="w-10 h-10 bg-slate-200 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                <img src="https://picsum.photos/seed/user/100/100" alt="User" />
+              <div className="w-10 h-10 bg-slate-200 rounded-full overflow-hidden border-2 border-white shadow-sm relative">
+                <Image 
+                  src="https://picsum.photos/seed/user/100/100" 
+                  alt="User" 
+                  fill
+                  className="object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
             </div>
           </div>
@@ -442,7 +517,15 @@ function ProductsTab() {
               <tr key={product.id} className="hover:bg-slate-50/50 transition-all">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <img src={product.image} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                    <div className="w-12 h-12 rounded-xl overflow-hidden relative">
+                      <Image 
+                        src={product.image} 
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
                     <span className="font-bold text-slate-900">{product.name}</span>
                   </div>
                 </td>
@@ -471,7 +554,28 @@ function ProductsTab() {
   );
 }
 
+import { Order } from '@/lib/db';
+
 function OrdersTab() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = db.subscribeToOrders('1', (newOrders) => {
+      setOrders(newOrders);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -506,17 +610,14 @@ function OrdersTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {[
-              { id: '#ORD-1024', customer: 'أحمد علي', date: '2024/03/01', total: '15,000 ر.ي', status: 'pending', method: 'جيب' },
-              { id: '#ORD-1023', customer: 'سارة محمد', date: '2024/03/01', total: '24,500 ر.ي', status: 'approved', method: 'جوالي' },
-              { id: '#ORD-1022', customer: 'خالد حسن', date: '2024/02/29', total: '8,000 ر.ي', status: 'rejected', method: 'فلوسك' },
-              { id: '#ORD-1021', customer: 'ليلى عبدالله', date: '2024/02/29', total: '12,000 ر.ي', status: 'approved', method: 'كاش' },
-            ].map((order) => (
+            {orders.map((order) => (
               <tr key={order.id} className="hover:bg-slate-50/50 transition-all">
                 <td className="px-6 py-4 font-mono text-xs font-bold text-slate-900">{order.id}</td>
-                <td className="px-6 py-4 text-sm font-bold text-slate-900">{order.customer}</td>
-                <td className="px-6 py-4 text-sm text-slate-500">{order.date}</td>
-                <td className="px-6 py-4 text-sm font-bold text-slate-900">{order.total}</td>
+                <td className="px-6 py-4 text-sm font-bold text-slate-900">{order.customerName}</td>
+                <td className="px-6 py-4 text-sm text-slate-500">
+                  {order.createdAt instanceof Timestamp ? order.createdAt.toDate().toLocaleDateString('ar-YE') : new Date(order.createdAt).toLocaleDateString('ar-YE')}
+                </td>
+                <td className="px-6 py-4 text-sm font-bold text-slate-900">{order.total.toLocaleString()} ر.ي</td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col gap-1">
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase w-fit ${
@@ -526,7 +627,7 @@ function OrdersTab() {
                     }`}>
                       {order.status === 'approved' ? 'مقبول' : order.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}
                     </span>
-                    <span className="text-[10px] text-slate-400 mr-2">{order.method}</span>
+                    <span className="text-[10px] text-slate-400 mr-2">{order.paymentMethod}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -556,6 +657,11 @@ function OrdersTab() {
             ))}
           </tbody>
         </table>
+        {orders.length === 0 && (
+          <div className="p-12 text-center text-slate-500">
+            لا توجد طلبات حالياً
+          </div>
+        )}
       </div>
     </div>
   );
@@ -582,7 +688,15 @@ function WalletsTab() {
           {wallets.map((wallet) => (
             <div key={wallet.id} className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                <img src={wallet.icon} className="w-6 h-6 rounded-md" alt="" />
+                <div className="w-6 h-6 relative rounded-md overflow-hidden">
+                  <Image 
+                    src={wallet.icon} 
+                    alt={wallet.name}
+                    fill
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
                 {wallet.name}
               </label>
               <input 

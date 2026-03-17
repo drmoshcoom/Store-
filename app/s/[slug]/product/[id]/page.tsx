@@ -20,73 +20,27 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 
-// Mock Data (In a real app, fetch from db)
-const products = [
-  { 
-    id: 'p1', 
-    name: 'دورة تعلم البرمجة بلغة بايثون', 
-    price: 15000, 
-    image: 'https://picsum.photos/seed/python/800/800', 
-    category: 'هواتف',
-    description: 'دورة شاملة من الصفر إلى الاحتراف في لغة بايثون، تشمل المشاريع العملية والتمارين التفاعلية. ستتعلم أساسيات اللغة، التعامل مع البيانات، وبناء تطبيقات ويب حقيقية.',
-    fileSize: '1.2 GB',
-    fileType: 'MP4',
-    features: ['أكثر من 20 ساعة فيديو', 'مشاريع عملية حقيقية', 'شهادة إتمام الدورة', 'دعم فني مباشر'],
-    rating: 4.9,
-    reviewCount: 124,
-    reviews: [
-      { id: 1, user: 'أحمد محمد', rating: 5, comment: 'دورة ممتازة جداً وشرح واضح وبسيط.', date: '2024-02-15' },
-      { id: 2, user: 'سارة علي', rating: 4, comment: 'محتوى غني جداً، لكن كنت أتمنى لو كان هناك المزيد من التمارين.', date: '2024-02-10' }
-    ]
-  },
-  { 
-    id: 'p2', 
-    name: 'كتاب التصميم الجرافيكي للمبتدئين', 
-    price: 5000, 
-    image: 'https://picsum.photos/seed/design/800/800', 
-    category: 'ساعات',
-    description: 'دليل شامل لتعلم أساسيات التصميم الجرافيكي باستخدام أدوات مجانية. يغطي الكتاب نظريات الألوان، اختيار الخطوط، وتنسيق العناصر البصرية بشكل احترافي.',
-    fileSize: '45 MB',
-    fileType: 'PDF',
-    features: ['دليل خطوة بخطوة', 'أمثلة تطبيقية', 'قوالب مجانية مرفقة', 'تحديثات مجانية مدى الحياة'],
-    rating: 4.7,
-    reviewCount: 85,
-    reviews: [
-      { id: 1, user: 'خالد حسن', rating: 5, comment: 'كتاب رائع جداً للمبتدئين، أنصح به بشدة.', date: '2024-01-20' }
-    ]
-  },
-  { 
-    id: 'p3', 
-    name: 'قوالب إكسل للمحاسبة المالية', 
-    price: 3500, 
-    image: 'https://picsum.photos/seed/excel/800/800', 
-    category: 'إكسسوارات',
-    description: 'مجموعة من القوالب الجاهزة لتنظيم حساباتك المالية الشخصية أو التجارية. تشمل قوالب للميزانية، تتبع المصاريف، وإدارة المخزون بشكل مبسط.',
-    fileSize: '5 MB',
-    fileType: 'XLSX',
-    features: ['سهولة الاستخدام', 'معادلات جاهزة', 'دليل استخدام مرفق', 'متوافق مع جميع إصدارات إكسل'],
-    rating: 4.8,
-    reviewCount: 42,
-    reviews: [
-      { id: 1, user: 'ليلى محمود', rating: 5, comment: 'وفرت علي الكثير من الوقت والجهد في تنظيم حساباتي.', date: '2024-02-05' }
-    ]
-  }
-];
+import { db, Product } from '@/lib/db';
+import Image from 'next/image';
 
 export default function ProductDetail() {
   const { slug, id } = useParams();
   const router = useRouter();
   const { addToCart } = useCart();
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<Product | any>(null);
+  const [loading, setLoading] = useState(true);
   const [newReview, setNewReview] = useState({ rating: 0, comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
-    const loadProduct = () => {
-      const found = products.find(p => p.id === id);
-      if (found) {
-        setProduct(found);
+    const loadProduct = async () => {
+      if (id) {
+        const found = await db.getProductById(id as string);
+        if (found) {
+          setProduct(found);
+        }
       }
+      setLoading(false);
     };
     loadProduct();
   }, [id]);
@@ -120,7 +74,8 @@ export default function ProductDetail() {
     }, 1000);
   };
 
-  if (!product) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+  if (!product) return <div className="min-h-screen flex items-center justify-center">المنتج غير موجود</div>;
 
   return (
     <div className="min-h-screen bg-white">
@@ -146,13 +101,26 @@ export default function ProductDetail() {
             animate={{ opacity: 1, x: 0 }}
             className="space-y-4"
           >
-            <div className="aspect-square rounded-[2rem] overflow-hidden bg-slate-100 border border-slate-100 shadow-2xl shadow-slate-200/50">
-              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+            <div className="aspect-square rounded-[2rem] overflow-hidden bg-slate-100 border border-slate-100 shadow-2xl shadow-slate-200/50 relative">
+              <Image 
+                src={product.image || 'https://picsum.photos/seed/product/800/800'} 
+                alt={product.name} 
+                fill
+                className="object-cover"
+                priority
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div className="grid grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden cursor-pointer hover:border-indigo-300 transition-all">
-                  <img src={`https://picsum.photos/seed/${product.id}${i}/200/200`} className="w-full h-full object-cover" alt="" />
+                <div key={i} className="aspect-square rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden cursor-pointer hover:border-indigo-300 transition-all relative">
+                  <Image 
+                    src={`https://picsum.photos/seed/${product.id}${i}/200/200`} 
+                    alt="" 
+                    fill
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
               ))}
             </div>

@@ -29,106 +29,16 @@ import {
   FileText,
   Code,
   Palette,
-  LayoutDashboard
+  LayoutDashboard,
+  Package
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
-// Mock Store Data (In a real app, fetch from db based on slug)
-const storeData = {
-  id: '1',
-  name: 'متجر التقنية',
-  slug: 'tech-store',
-  logo: 'https://picsum.photos/seed/tech/100/100',
-  primaryColor: '#4f46e5',
-  description: 'وجهتك الأولى لأحدث الأجهزة الإلكترونية والملحقات في اليمن.',
-  wallets: {
-    number: '781139604',
-    available: ['محفظة جيب', 'محفظة جوالي', 'محفظة سبأ كاش', 'محفظة فلوسك', 'محفظة mPay', 'محفظة إيزي', 'محفظة كاش', 'محفظة OEN كاش', 'محفظة بنكي لايت']
-  },
-  banks: {
-    ykb: {
-      name: 'بنك اليمن والكويت',
-      owner: 'أحمد عبدالملك أحمد درموش',
-      account: '0205736'
-    },
-    kuraimi: {
-      name: 'بنك الكريمي',
-      owner: 'أحمد عبدالملك أحمد درموش',
-      accounts: {
-        yer: '3081626633',
-        sar: '3084018917',
-        usd: '3183736867'
-      }
-    },
-    rajhi: {
-      name: 'بنك الراجحي',
-      owner: 'محمد عبد الغني احمد منصور',
-      account: '132000010006086195597',
-      iban: 'SA2980000132 608016195597'
-    }
-  }
-};
-
-const products = [
-  { 
-    id: 'p1', 
-    name: 'دورة تعلم البرمجة بلغة بايثون', 
-    price: 15000, 
-    image: 'https://picsum.photos/seed/python/400/400', 
-    category: 'دورات',
-    fileSize: '1.2 GB',
-    fileType: 'MP4',
-    rating: 4.9,
-    reviewCount: 124
-  },
-  { 
-    id: 'p2', 
-    name: 'كتاب التصميم الجرافيكي للمبتدئين', 
-    price: 5000, 
-    image: 'https://picsum.photos/seed/design/400/400', 
-    category: 'كتب',
-    fileSize: '45 MB',
-    fileType: 'PDF',
-    rating: 4.7,
-    reviewCount: 85
-  },
-  { 
-    id: 'p3', 
-    name: 'قوالب إكسل للمحاسبة المالية', 
-    price: 3500, 
-    image: 'https://picsum.photos/seed/excel/400/400', 
-    category: 'قوالب',
-    fileSize: '5 MB',
-    fileType: 'XLSX',
-    rating: 4.8,
-    reviewCount: 42
-  },
-  { 
-    id: 'p4', 
-    name: 'برنامج إدارة المخازن والمبيعات', 
-    price: 25000, 
-    image: 'https://picsum.photos/seed/software/400/400', 
-    category: 'برامج',
-    fileSize: '150 MB',
-    fileType: 'EXE',
-    rating: 4.6,
-    reviewCount: 28
-  },
-  { 
-    id: 'p5', 
-    name: 'حزمة أيقونات واجهة المستخدم الاحترافية', 
-    price: 7500, 
-    image: 'https://picsum.photos/seed/icons/400/400', 
-    category: 'تصاميم',
-    fileSize: '85 MB',
-    fileType: 'FIG',
-    rating: 4.9,
-    reviewCount: 56
-  }
-];
-
 import { useCart } from '@/context/CartContext';
+import { db, Product, Store, Order } from '@/lib/db';
+
+import Image from 'next/image';
 
 export default function StoreFront() {
   const params = useParams();
@@ -137,6 +47,30 @@ export default function StoreFront() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('الكل');
+  const [store, setStore] = useState<Store | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const slug = params.slug as string;
+      let storeData = await db.getStoreBySlug(slug);
+      
+      // Seed data if no store found (for demo)
+      if (!storeData && slug === 'tech-store') {
+        await db.seedData();
+        storeData = await db.getStoreBySlug(slug);
+      }
+
+      if (storeData) {
+        setStore(storeData);
+        const productsData = await db.getProductsByStoreId(storeData.id);
+        setProducts(productsData);
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, [params.slug]);
 
   const categories = [
     { name: 'الكل', icon: <LayoutDashboard size={20} /> },
@@ -270,11 +204,21 @@ export default function StoreFront() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg overflow-hidden">
-                <img src={storeData.logo} alt={storeData.name} className="w-full h-full object-cover" />
+              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg overflow-hidden relative">
+                {store?.logo ? (
+                  <Image 
+                    src={store.logo} 
+                    alt={store.name} 
+                    fill 
+                    className="object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <ShoppingBag size={24} />
+                )}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">{storeData.name}</h1>
+                <h1 className="text-xl font-bold text-slate-900">{store?.name || 'متجرنا'}</h1>
                 <p className="text-xs text-slate-500">متجر موثق في يمن ساس</p>
               </div>
             </div>
@@ -337,10 +281,13 @@ export default function StoreFront() {
               >
                 {/* Background Image/Pattern */}
                 <div className="absolute inset-0">
-                  <img 
+                  <Image 
                     src={banners[activeBanner].image} 
-                    className="w-full h-full object-cover opacity-40" 
-                    alt="Banner" 
+                    alt="Banner"
+                    fill
+                    className="object-cover opacity-40"
+                    priority
+                    referrerPolicy="no-referrer"
                   />
                   <div className={`absolute inset-0 bg-gradient-to-r ${banners[activeBanner].color}`} />
                 </div>
@@ -445,10 +392,22 @@ export default function StoreFront() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-          {products
+          {loading ? (
+            Array(6).fill(0).map((_, i) => (
+              <div key={i} className="bg-white rounded-[2rem] h-80 animate-pulse border border-slate-100" />
+            ))
+          ) : products.length === 0 ? (
+            <div className="col-span-full py-20 text-center space-y-4">
+              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                <Package size={40} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">لا توجد منتجات حالياً</h3>
+              <p className="text-slate-500">جاري العمل على إضافة منتجات جديدة للمتجر.</p>
+            </div>
+          ) : products
             .filter(p => 
-              (selectedCategory === 'الكل' || p.category === selectedCategory) && 
-              p.name.includes(searchQuery)
+              (selectedCategory === 'الكل' || (p as any).category === selectedCategory) && 
+              p.name.toLowerCase().includes(searchQuery.toLowerCase())
             )
             .map((product) => (
             <motion.div 
@@ -457,14 +416,16 @@ export default function StoreFront() {
               className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:shadow-indigo-100/50 transition-all duration-300 group flex flex-col"
             >
               <Link href={`/s/${params.slug}/product/${product.id}`} className="relative aspect-square overflow-hidden bg-slate-50">
-                <img 
-                  src={product.image} 
+                <Image 
+                  src={product.image || 'https://picsum.photos/seed/product/400/400'} 
                   alt={product.name} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
                 />
                 <div className="absolute top-4 right-4">
                   <span className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl text-[10px] font-black text-indigo-600 uppercase tracking-wider shadow-sm border border-white">
-                    {product.category}
+                    {(product as any).category || 'عام'}
                   </span>
                 </div>
               </Link>
@@ -554,40 +515,44 @@ export default function StoreFront() {
                     </button>
                   </div>
                 ) : (
-                  cart.map((item) => {
-                    const product = products.find(p => p.id === item.id);
-                    if (!product) return null;
-                    return (
-                      <div key={item.id} className="flex gap-4">
-                        <img src={product.image} className="w-20 h-20 rounded-2xl object-cover border border-slate-100" alt="" />
-                        <div className="flex-1">
-                          <h4 className="font-bold text-slate-900">{product.name}</h4>
-                          <p className="text-sm text-slate-500">{product.price.toLocaleString()} ر.ي</p>
-                          <div className="flex items-center gap-3 mt-2">
-                            <button 
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600"
-                            >
-                              -
-                            </button>
-                            <span className="text-sm font-bold">{item.quantity}</span>
-                            <button 
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-slate-300 hover:text-red-500 transition-all self-start"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                  cart.map((item) => (
+                    <div key={item.id} className="flex gap-4">
+                      <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-slate-100 flex-shrink-0">
+                        <Image 
+                          src={item.image || 'https://picsum.photos/seed/product/100/100'} 
+                          alt={item.name} 
+                          fill
+                          className="object-cover"
+                          referrerPolicy="no-referrer"
+                        />
                       </div>
-                    );
-                  })
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-900 line-clamp-1">{item.name}</h4>
+                        <p className="text-sm text-slate-500">{item.price.toLocaleString()} ر.ي</p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <button 
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600"
+                          >
+                            -
+                          </button>
+                          <span className="text-sm font-bold">{item.quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-600"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-slate-300 hover:text-red-500 transition-all self-start"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))
                 )}
               </div>
 
@@ -619,7 +584,7 @@ export default function StoreFront() {
           <CheckoutModal 
             onClose={() => setIsCheckoutOpen(false)} 
             total={cartTotal} 
-            storeWallets={storeData.wallets}
+            store={store}
           />
         )}
       </AnimatePresence>
@@ -633,10 +598,10 @@ export default function StoreFront() {
                 <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
                   <ShoppingBag size={24} />
                 </div>
-                <span className="text-xl font-bold text-slate-900">{storeData.name}</span>
+                <span className="text-xl font-bold text-slate-900">{store?.name || 'متجرنا'}</span>
               </div>
               <p className="text-slate-500 leading-relaxed max-w-sm">
-                {storeData.description}
+                {store?.name} يوفر لك أفضل المنتجات الرقمية بجودة عالية وأسعار منافسة.
               </p>
             </div>
             <div>
@@ -657,7 +622,7 @@ export default function StoreFront() {
             </div>
           </div>
           <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-xs">
-            <p>© 2024 {storeData.name}. جميع الحقوق محفوظة.</p>
+            <p>© 2024 {store?.name || 'متجرنا'}. جميع الحقوق محفوظة.</p>
             <div className="flex items-center gap-2">
               <span>مدعوم بواسطة</span>
               <Link href="/" className="font-bold text-indigo-600">يمن ساس</Link>
@@ -671,12 +636,13 @@ export default function StoreFront() {
 
 import { NotificationService } from '@/lib/notifications';
 
-function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, total: number, storeWallets: any }) {
+function CheckoutModal({ onClose, total, store }: { onClose: () => void, total: number, store: Store | null }) {
   const [step, setStep] = useState(1);
   const [selectedWallet, setSelectedWallet] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [customerData, setCustomerData] = useState({ name: '', phone: '', email: '' });
+  const { items: cart } = useCart();
 
   const wallets = [
     { id: 'e_wallets', name: 'المحافظ الإلكترونية', icon: 'https://picsum.photos/seed/wallet/40/40' },
@@ -689,24 +655,37 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call and notifications
-    setTimeout(async () => {
+    try {
       const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-      const mockOrder = {
+      const newOrder: Order = {
         id: orderId,
-        storeId: '1',
+        storeId: store?.id || '1',
         customerName: customerData.name,
         customerPhone: customerData.phone,
         customerEmail: customerData.email,
         total: total,
-        status: 'pending' as any,
-        paymentMethod: selectedWallet as any,
-        items: [],
+        status: 'pending',
+        paymentMethod: selectedWallet,
+        items: cart.map(item => ({
+          productId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
         createdAt: new Date()
       };
 
+      await db.addOrder(newOrder);
+      
+      // Trigger Notifications
+      await NotificationService.notifyCustomerNewOrder(newOrder);
+      await NotificationService.notifyOwnerNewOrder(newOrder);
+
+      setIsSubmitting(false);
+      setIsSuccess(true);
+      
       // Construct WhatsApp Message
-      const message = `طلب جديد من متجر ${storeData.name}:
+      const message = `طلب جديد من متجر ${store?.name}:
 العميل: ${customerData.name}
 رقم الطلب: ${orderId}
 المبلغ: ${total.toLocaleString()} ر.ي
@@ -714,19 +693,15 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
 رقم الهاتف: ${customerData.phone}`;
       
       const whatsappUrl = `https://wa.me/967781139604?text=${encodeURIComponent(message)}`;
-      
-      // Trigger Notifications
-      await NotificationService.notifyCustomerNewOrder(mockOrder as any);
-      await NotificationService.notifyOwnerNewOrder(mockOrder as any);
 
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      
       // Open WhatsApp in new tab after a short delay
       setTimeout(() => {
         window.open(whatsappUrl, '_blank');
       }, 1000);
-    }, 2000);
+    } catch (error) {
+      console.error('Order submission failed:', error);
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
@@ -831,7 +806,15 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
                         : 'border-slate-100 bg-white hover:border-slate-200'
                       }`}
                     >
-                      <img src={wallet.icon} className="w-10 h-10 rounded-lg" alt="" />
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden">
+                        <Image 
+                          src={wallet.icon} 
+                          alt={wallet.name}
+                          fill
+                          className="object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                       <span className="text-[10px] font-bold text-slate-700">{wallet.name}</span>
                     </button>
                   ))}
@@ -853,7 +836,7 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
                         <span>781139604</span>
                       </div>
                       <div className="flex flex-wrap justify-center gap-2">
-                        {storeData.wallets.available.map((w, i) => (
+                        {store?.wallets?.available?.map((w, i) => (
                           <span key={i} className="bg-slate-50 px-2 py-1 rounded-lg text-[10px] text-slate-500 border border-slate-100">{w}</span>
                         ))}
                       </div>
@@ -861,13 +844,13 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
                   </div>
                 ) : selectedWallet === 'ykb' ? (
                   <div className="space-y-4">
-                    <p className="text-slate-600 text-xs">تفاصيل الحساب في {storeData.banks.ykb.name}:</p>
+                    <p className="text-slate-600 text-xs">تفاصيل الحساب في {store?.banks?.ykb?.name}:</p>
                     <div className="bg-white p-4 rounded-xl border border-slate-200 text-right space-y-2">
-                      <p className="text-xs text-slate-500">اسم صاحب الحساب: <span className="text-slate-900 font-bold">{storeData.banks.ykb.owner}</span></p>
+                      <p className="text-xs text-slate-500">اسم صاحب الحساب: <span className="text-slate-900 font-bold">{store?.banks?.ykb?.owner}</span></p>
                       <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl">
                         <div className="text-right">
                           <p className="text-[10px] text-slate-400">رقم الحساب</p>
-                          <p className="text-sm font-bold text-slate-900">{storeData.banks.ykb.account}</p>
+                          <p className="text-sm font-bold text-slate-900">{store?.banks?.ykb?.account}</p>
                         </div>
                         <button className="text-indigo-600"><Download size={14} /></button>
                       </div>
@@ -875,38 +858,38 @@ function CheckoutModal({ onClose, total, storeWallets }: { onClose: () => void, 
                   </div>
                 ) : selectedWallet === 'kuraimi' ? (
                   <div className="space-y-4">
-                    <p className="text-slate-600 text-xs">تفاصيل الحساب في {storeData.banks.kuraimi.name}:</p>
+                    <p className="text-slate-600 text-xs">تفاصيل الحساب في {store?.banks?.kuraimi?.name}:</p>
                     <div className="bg-white p-4 rounded-xl border border-slate-200 text-right space-y-3">
-                      <p className="text-xs text-slate-500">اسم صاحب الحساب: <span className="text-slate-900 font-bold">{storeData.banks.kuraimi.owner}</span></p>
+                      <p className="text-xs text-slate-500">اسم صاحب الحساب: <span className="text-slate-900 font-bold">{store?.banks?.kuraimi?.owner}</span></p>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
                           <span className="text-[10px] text-slate-400">ريال يمني</span>
-                          <span className="text-xs font-bold text-slate-900">{storeData.banks.kuraimi.accounts.yer}</span>
+                          <span className="text-xs font-bold text-slate-900">{store?.banks?.kuraimi?.accounts?.yer}</span>
                         </div>
                         <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
                           <span className="text-[10px] text-slate-400">ريال سعودي</span>
-                          <span className="text-xs font-bold text-slate-900">{storeData.banks.kuraimi.accounts.sar}</span>
+                          <span className="text-xs font-bold text-slate-900">{store?.banks?.kuraimi?.accounts?.sar}</span>
                         </div>
                         <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg">
                           <span className="text-[10px] text-slate-400">دولار</span>
-                          <span className="text-xs font-bold text-slate-900">{storeData.banks.kuraimi.accounts.usd}</span>
+                          <span className="text-xs font-bold text-slate-900">{store?.banks?.kuraimi?.accounts?.usd}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : selectedWallet === 'rajhi' ? (
                   <div className="space-y-4">
-                    <p className="text-slate-600 text-xs">تفاصيل الحساب في {storeData.banks.rajhi.name}:</p>
+                    <p className="text-slate-600 text-xs">تفاصيل الحساب في {store?.banks?.rajhi?.name}:</p>
                     <div className="bg-white p-4 rounded-xl border border-slate-200 text-right space-y-3">
-                      <p className="text-xs text-slate-500">اسم صاحب الحساب: <span className="text-slate-900 font-bold">{storeData.banks.rajhi.owner}</span></p>
+                      <p className="text-xs text-slate-500">اسم صاحب الحساب: <span className="text-slate-900 font-bold">{store?.banks?.rajhi?.owner}</span></p>
                       <div className="space-y-2">
                         <div className="bg-slate-50 p-2 rounded-lg">
                           <p className="text-[10px] text-slate-400">رقم الحساب</p>
-                          <p className="text-xs font-bold text-slate-900 break-all">{storeData.banks.rajhi.account}</p>
+                          <p className="text-xs font-bold text-slate-900 break-all">{store?.banks?.rajhi?.account}</p>
                         </div>
                         <div className="bg-slate-50 p-2 rounded-lg">
                           <p className="text-[10px] text-slate-400">رقم الآيبان (IBAN)</p>
-                          <p className="text-xs font-bold text-slate-900 break-all">{storeData.banks.rajhi.iban}</p>
+                          <p className="text-xs font-bold text-slate-900 break-all">{store?.banks?.rajhi?.iban}</p>
                         </div>
                       </div>
                     </div>

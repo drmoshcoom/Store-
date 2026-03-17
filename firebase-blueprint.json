@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "A store created by a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "slug": { "type": "string" },
+        "name": { "type": "string" },
+        "ownerEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "primaryColor": { "type": "string" },
+        "wallets": { "type": "object" },
+        "commissionRate": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "slug", "name", "ownerEmail", "status", "primaryColor", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "A product in a store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "storeId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "type": { "type": "string", "enum": ["physical", "digital"] },
+        "image": { "type": "string" },
+        "stock": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "digitalFileUrl": { "type": "string" },
+        "fileSize": { "type": "string" },
+        "fileType": { "type": "string" }
+      },
+      "required": ["id", "storeId", "name", "price", "type", "status"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "An order placed by a customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "storeId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "paymentMethod": { "type": "string" },
+        "paymentScreenshot": { "type": "string" },
+        "items": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storeId", "customerName", "customerPhone", "total", "status", "paymentMethod", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification for the store owner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "storeId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["order", "payment", "system"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "storeId", "title", "message", "type", "read", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "displayName": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/stores/{storeId}": { "schema": "Store", "description": "Stores collection" },
+    "/products/{productId}": { "schema": "Product", "description": "Products collection" },
+    "/orders/{orderId}": { "schema": "Order", "description": "Orders collection" },
+    "/notifications/{notificationId}": { "schema": "Notification", "description": "Notifications collection" },
+    "/users/{userId}": { "schema": "User", "description": "Users collection" }
+  }
+}
